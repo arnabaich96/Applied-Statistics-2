@@ -1,0 +1,19 @@
+library(regrrr)
+set.seed(12345)
+n=100
+x1=rnorm(n) 
+x2=rnorm(n)
+x=x1+x2
+y=0.1*x1 + 0.2*x2
+Mod=lm(y~x1+x2)
+model=lm(y~x);
+summary(model)
+residual=model$residuals
+y_hat=-0.00872+(0.1465*x)+residual
+model_1=lm(y_hat~x1+x2)
+summary(model_1)
+z1=x1+x2
+z2=x2
+z3=x1+x2
+z4=x1-x2
+test_coef_equality(Mod,)

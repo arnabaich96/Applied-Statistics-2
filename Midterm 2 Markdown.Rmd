@@ -1,0 +1,107 @@
+---
+title: "MIdterm 2 STA 5167"
+author: "Arnab Aich"
+date: "18/03/2021"
+output:
+  word_document: default
+  pdf_document: default
+---
+# **Problem 1**
+
+1st likelihood ratio Test H_0: transformation parameter is equal to 0 vs H_1: transformation parameter is not equal to 0. 2nd likelihood Ratio test H_0: no transformation is needed vs H_1: Transformation is needed Both tests got rejected at 0.05 level of significance, so we conclude that a transformation is required which is not logarithmic. Based on the output given in question the transformation should be Y^(-0.5). Also the box-cox plot indicates the peek at somewhere near -0.5.
+
+```{r,results=FALSE}
+library("alr4")
+library("MASS")
+attach(BigMac2003)
+```
+```{r}
+m2=lm(BigMac^(-0.5)~.,data=BigMac2003)
+summary(m2)
+summary(powerTransform(cbind(Apt, Bread, Bus, FoodIndex, Rice, TaxRate, TeachGI,TeachHours, TeachNI)∼ 1,family="yjPower"),data=BigMac2003)
+
+```
+* Yes we need to transform the data as follows according to the Yeo and Johnson method
+```{r}
+data=BigMac2003
+data$BigMac=BigMac^(-0.5)
+data$Bread=log(Bread)
+data$Bus=1/Bus
+data$Rice=Rice^(-0.5)
+data$FoodIndex=log(FoodIndex)
+data$Apt=Apt^(0.5)
+data$TeachGI=TeachGI^(-0.11)
+data$TeachNI=TeachNI^(-0.14)
+
+```
+* No we don't need all variables. We choose variables using Forward selection method using BIC.
+The method is as follows
+```{r}
+m3=lm(BigMac~1,data=data)
+m=lm(BigMac~.,data=data)
+step(m3,k=log(length(BigMac)),direction="forward",scope = formula(m))
+m4=lm(BigMac~TeachGI + FoodIndex + Bread,data=data)
+summary(m4)
+```
+* Yes there are 3 potential Outliers.
+```{r}
+SR=studres(m4)
+which(abs(SR)>2)
+```
+* There are no Influential Variable
+```{r}
+CD=cooks.distance(m4)
+which(CD>3)
+```
+# **Problem 2**
+```{r}
+library(alr4)
+attach(BGSboys)
+data=data.frame(WT2,HT2,WT9,HT9,LG9,ST9,HT18)
+head(data)
+```
+We now perform a complete exploratory analysis of this data.
+```{r}
+pairs(data)
+m1=lm(HT18~.,data=data)
+summary(m1)
+```
+From then plot we can see that transformation for a few variables are needed to satisfy our normality assumption.transformation we need are as follows. 
+```{r}
+summary(powerTransform(cbind(WT2, HT2, WT9, HT9, LG9, ST9)~1,data=data))
+data$WT2=log(WT2)
+data$WT9=1/WT9
+data$LG9=1/LG9
+```
+Also the regression output indicates a lot of variables are not significant so we need use Stepwise Regression in order to get our Best Model.Our stepwise Regression output are as follows where we get our required predictors and cut off the rest.
+```{r}
+m=lm(HT18~.,data=data)
+M=step(m,data=data,direction = 'both')
+summary(M)
+```
+Some plots regarding our stepwise regression Model
+```{r}
+invResPlot(M)
+marginalModelPlot(M)
+```
+Now we perform the Bootstrap Analysis on the final Model and compare it to our Actual Output.
+```{r}
+boot_coeff=list()
+for( i in 1:999){ 
+  id=sample(1:66, 66, replace = TRUE)
+  boot_data=NULL
+  boot_data=data[id,] 
+  m = lm( data = boot_data,  HT18 ~ .)
+  boot_coeff[[i]] = m$coefficient 
+}
+boot_coeff_new=do.call(rbind,boot_coeff)
+
+HT9=c(avg = mean(boot_coeff_new[,"HT9"]), se = sd((boot_coeff_new[,"HT9"])), quantile(x=boot_coeff_new[,"HT9"], probs = c(0.025, 0.975))) 
+LG9=c(avg = mean(boot_coeff_new[,"LG9"]), se = sd((boot_coeff_new[,"LG9"])), quantile(x=boot_coeff_new[,"LG9"], probs = c(0.025, 0.975))) 
+rbind(HT9,LG9)
+M$coefficients
+confint(M)
+
+```
+Here we have used Confidence Intervals for testing coefficients instead of p-values.We observe that the t-test statistics are slightly less for the bootstrapped model as compared to the previous model.Also the confidence intervals are wider for our actual model than the bootstrap ones.
+

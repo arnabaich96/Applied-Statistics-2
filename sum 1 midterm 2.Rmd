@@ -1,0 +1,57 @@
+---
+title: "Midterm 2"
+author: "Sum 1"
+date: "18/03/2021"
+output:
+  word_document: default
+  pdf_document: default
+---
+1st likelihood ratio Test H_0: transformation parameter is equal to 0 vs H_1: transformation parameter is not equal to 0.
+  2nd likelihood Ratio test H_0: no transformation is needed vs H_1: Transformation is needed
+Both tests got rejected at 0.05 level of significance, so we conclude that a transformation is required which is not logarithmic.
+Based on the output given in question the transformation should be Y^(-0.4471). Also the box-cox plot indicates the peek at somewhere near -0.5.
+
+
+```{r}
+library("alr4")
+library("MASS")
+attach(BigMac2003)
+m1=lm(BigMac~.,data=BigMac2003)
+```
+```{r}
+powerTransform(m1)
+summary(powerTransform(m1))
+```
+Yes,we need to transform the variable since both p values are <0.05
+Required Transformation Y^-(0.3117)
+```{r}
+m2=lm(BigMac^(-0.3117)~.,data=BigMac2003)
+m3=lm(BigMac^(-0.3117)~1)
+stepAIC(m3,k=log(length(BigMac)),direction="forward",scope = formula(m2))
+```
+No all variables are not needed in the model base on forward stepwise selection using BIC.Regression with required variables are as follows
+```{r}
+m4=lm(BigMac^(-0.3117)~TeachGI + Rice + FoodIndex + Bread)
+summary(m4)
+SR=studres(m4)
+```
+Yes,there are potential outliers. They are as follows\
+```{r}
+which(abs(SR)>2)
+```
+Note:I have used critical value of t_0.05 as 2 instead of 1.96(Z_0.05)
+```{r}
+CD=cooks.distance(m4)
+which(CD>3)
+```
+There are no influential observations.
+
+
+```
+
+
+
+
+
+
+
